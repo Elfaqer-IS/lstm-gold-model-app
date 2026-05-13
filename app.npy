@@ -2,9 +2,6 @@ import streamlit as st
 import yfinance as yf
 import numpy as np
 import pandas as pd
-import ta
-import matplotlib.pyplot as plt
-
 from tensorflow.keras.models import load_model
 from sklearn.preprocessing import MinMaxScaler
 
@@ -14,7 +11,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 model = load_model("gold_model.h5")
 
-st.title("📊 GOLD LSTM BACKTEST DASHBOARD")
+st.title("📊 GOLD LSTM DASHBOARD")
 
 # =========================
 # DATA
@@ -24,7 +21,7 @@ data = yf.download("GC=F", period="2y", interval="1d")
 data = data[['Close']].dropna()
 
 # =========================
-# SCALING
+# SCALE
 # =========================
 
 scaler = MinMaxScaler()
@@ -33,56 +30,36 @@ scaled = scaler.fit_transform(data)
 window = 60
 
 real_prices = data['Close'].values
-predictions = []
 
 # =========================
-# BACKTEST
+# PREDICTION (LAST WINDOW ONLY)
 # =========================
 
-for i in range(window, len(scaled)):
+x_input = scaled[-window:]
+x_input = np.array([x_input])
+x_input = np.reshape(x_input, (1, window, 1))
 
-    X_input = scaled[i-window:i]
-    X_input = np.array([X_input])
-    X_input = np.reshape(X_input, (1, window, 1))
+pred = model.predict(x_input, verbose=0)
 
-    pred = model.predict(X_input, verbose=0)
-    predictions.append(pred[0][0])
+dummy = np.zeros((1,1))
+dummy[0,0] = pred[0,0]
 
-predictions = scaler.inverse_transform(
-    np.array(predictions).reshape(-1, 1)
-)
-
-real_test = real_prices[window:]
-
-# =========================
-# METRICS
-# =========================
-
-mae = np.mean(np.abs(real_test - predictions.flatten()))
-
-st.metric("MAE", round(mae, 2))
-
-# =========================
-# PLOT
-# =========================
-
-fig, ax = plt.subplots()
-
-ax.plot(real_test, label="Real")
-ax.plot(predictions, label="Prediction")
-
-ax.legend()
-
-st.pyplot(fig)
-
-# =========================
-# CURRENT SIGNAL
-# =========================
+next_price = scaler.inverse_transform(dummy)[0,0]
 
 current_price = real_prices[-1]
-last_prediction = predictions[-1][0]
 
-signal = "BUY 📈" if last_prediction > current_price else "SELL 📉"
+# =========================
+# SIGNAL
+# =========================
+
+signal = "BUY 📈" if next_price > current_price else "SELL 📉"
+
+# =========================
+# DISPLAY
+# =========================
+
+st.metric("Current Price", round(current_price, 2))
+st.metric("Predicted Price", round(next_price, 2))
 
 st.subheader("Signal")
 st.write(signal)
