@@ -1,0 +1,88 @@
+import streamlit as st
+import yfinance as yf
+import numpy as np
+import pandas as pd
+import ta
+import matplotlib.pyplot as plt
+
+from tensorflow.keras.models import load_model
+from sklearn.preprocessing import MinMaxScaler
+
+# =========================
+# LOAD MODEL
+# =========================
+
+model = load_model("gold_model.h5")
+
+st.title("📊 GOLD LSTM BACKTEST DASHBOARD")
+
+# =========================
+# DATA
+# =========================
+
+data = yf.download("GC=F", period="2y", interval="1d")
+data = data[['Close']].dropna()
+
+# =========================
+# SCALING
+# =========================
+
+scaler = MinMaxScaler()
+scaled = scaler.fit_transform(data)
+
+window = 60
+
+real_prices = data['Close'].values
+predictions = []
+
+# =========================
+# BACKTEST
+# =========================
+
+for i in range(window, len(scaled)):
+
+    X_input = scaled[i-window:i]
+    X_input = np.array([X_input])
+    X_input = np.reshape(X_input, (1, window, 1))
+
+    pred = model.predict(X_input, verbose=0)
+    predictions.append(pred[0][0])
+
+predictions = scaler.inverse_transform(
+    np.array(predictions).reshape(-1, 1)
+)
+
+real_test = real_prices[window:]
+
+# =========================
+# METRICS
+# =========================
+
+mae = np.mean(np.abs(real_test - predictions.flatten()))
+
+st.metric("MAE", round(mae, 2))
+
+# =========================
+# PLOT
+# =========================
+
+fig, ax = plt.subplots()
+
+ax.plot(real_test, label="Real")
+ax.plot(predictions, label="Prediction")
+
+ax.legend()
+
+st.pyplot(fig)
+
+# =========================
+# CURRENT SIGNAL
+# =========================
+
+current_price = real_prices[-1]
+last_prediction = predictions[-1][0]
+
+signal = "BUY 📈" if last_prediction > current_price else "SELL 📉"
+
+st.subheader("Signal")
+st.write(signal)
