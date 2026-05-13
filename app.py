@@ -1,8 +1,7 @@
-import streamlit as st
-import yfinance as yf
+import os
 
-st.title("Gold Data")
-
-data = yf.download("GC=F", period="1y", interval="1d")
-
-st.line_chart(data['Close'])
+if os.path.exists("predictions.csv"):
+    df = pd.read_csv("predictions.csv")
+else:
+    st.warning("predictions.csv introuvable")
+    df = None
