@@ -1,12 +1,12 @@
 import streamlit as st
+import yfinance as yf
+import numpy as np
 import pandas as pd
 
-st.title("📊 GOLD LSTM DASHBOARD (STABLE)")
+st.title("📊 GOLD DASHBOARD")
 
-# load predictions generated from Colab
-df = pd.read_csv("predictions.csv")
+# DATA
+data = yf.download("GC=F", period="2y", interval="1d")
+data = data[['Close']].dropna()
 
-st.line_chart(df)
-
-st.write("Dernières valeurs :")
-st.dataframe(df.tail())
+st.line_chart(data)
