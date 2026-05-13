@@ -1,12 +1,8 @@
 import streamlit as st
 import yfinance as yf
-import numpy as np
-import pandas as pd
 
-st.title("📊 GOLD DASHBOARD")
+st.title("Gold Data")
 
-# DATA
-data = yf.download("GC=F", period="2y", interval="1d")
-data = data[['Close']].dropna()
+data = yf.download("GC=F", period="1y", interval="1d")
 
-st.line_chart(data)
+st.line_chart(data['Close'])
